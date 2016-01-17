@@ -9,11 +9,9 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 public class ShootMessage {
 
     public final Coordinate coordinate;
-    public final int player;
     public final @JsonProperty("class") String metaType = "game.messages.ShootMessage";
 
-    public ShootMessage(Coordinate coordinate, int player) {
+    public ShootMessage(Coordinate coordinate) {
         this.coordinate = coordinate;
-        this.player = player;
     }
 }

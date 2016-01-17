@@ -13,11 +13,8 @@ public class Main {
 
     public static void main(String[] args) throws Exception {
 
-        String gameId = args[0];
-        int player = Integer.parseInt(args[1]);
-
-        VeryDumbRobot robot = new VeryDumbRobot(gameId,player );
-
+        String token = args[0];
+        VeryDumbRobot robot = new VeryDumbRobot(token);
         robot.initiate();
     }
 }

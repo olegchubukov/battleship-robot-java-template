@@ -8,6 +8,8 @@ import no.sonat.battleships.models.Ship;
 import no.sonat.battleships.models.ShootMessage;
 import no.sonat.battleships.models.SetShipMessage;
 import org.java_websocket.client.WebSocketClient;
+import org.java_websocket.drafts.Draft_10;
+import org.java_websocket.drafts.Draft_76;
 import org.java_websocket.handshake.ServerHandshake;
 
 import java.io.IOException;
@@ -22,24 +24,26 @@ public class VeryDumbRobot {
 
     final ObjectMapper json = new ObjectMapper();
 
-    final String gameId;
-    final int player;
+    final String token;
 
     WebSocketClient wsClient;
 
-    public VeryDumbRobot(String gameId, int player) throws Exception {
-        this.gameId = gameId;
-        this.player = player;
+    public VeryDumbRobot(String token) throws Exception {
+        this.token = token;
     }
 
     public void initiate() throws URISyntaxException {
 
-        this.wsClient = new WebSocketClient(new URI("ws://10.0.0.4:9000/game/" + gameId + "/socket")) {
+        System.out.println("befor connect");
+
+        Map<String, String> headers = new HashMap<String, String>(){{
+            put("Authorization", "Bearer " + token);
+        }};
+
+        this.wsClient = new WebSocketClient(new URI("ws://localhost:9000/connect"), new Draft_10(), headers, 500) {
             @Override
             public void onOpen(ServerHandshake serverHandshake) {
-                System.out.println("onOpen");
-
-                placeShips();
+                System.out.println("Connected!");
             }
 
             @Override
@@ -56,17 +60,24 @@ public class VeryDumbRobot {
                 final String type = msg.get("class").asText();
 
                 switch (type) {
+                    case "game.broadcast.GameIsInPlanningMode":
+                        placeShips();
+                        break;
                     case "game.broadcast.GameIsStarted":
                         onGameStart(msg);
                         break;
-                    case "game.broadcast.NextPlayerTurn":
-                        if (msg.get("playerTurn").asInt() == player) {
-                            shoot();
-                        }
+//                    case "game.broadcast.NextPlayerTurn":
+////                        if (msg.get("playerTurn").asInt() == player) {
+////                            shoot();
+////                        }
+//                        break;
+
+                    case "game.messages.ItsYourTurnMessage":
+                        shoot();
                         break;
                     case "game.broadcast.GameOver":
-                        boolean weWon = msg.get("andTheWinnerIs").asInt() == player;
-                        System.out.println(weWon ? "We Won!!!" : "Wo lost!!!");
+//                        boolean weWon = msg.get("andTheWinnerIs").asInt() == player;
+//                        System.out.println(weWon ? "We Won!!!" : "Wo lost!!!");
                         System.exit(0);
                     default:
                         break;
@@ -75,7 +86,7 @@ public class VeryDumbRobot {
 
             @Override
             public void onClose(int i, String s, boolean b) {
-                System.out.println("onclose");
+                System.out.println("Disconnected!");
             }
 
             @Override
@@ -83,18 +94,20 @@ public class VeryDumbRobot {
                 System.out.println("onError");
                 System.out.println(e.getMessage());
             }
+
+
         };
 
         wsClient.connect();
     }
 
     public void placeShips() {
-        SetShipMessage ship1 = new SetShipMessage(new Ship(new Coordinate[] {new Coordinate(2,2), new Coordinate(2,3)}), player);
-        SetShipMessage ship2 = new SetShipMessage(new Ship(new Coordinate[] {new Coordinate(4,4), new Coordinate(4,5), new Coordinate(4,6)}), player);
-        SetShipMessage ship3 = new SetShipMessage(new Ship(new Coordinate[] {new Coordinate(8,1), new Coordinate(9,1), new Coordinate(10, 1)}), player);
-        SetShipMessage ship4 = new SetShipMessage(new Ship(new Coordinate[] {new Coordinate(1,1), new Coordinate(2,1), new Coordinate(3,1), new Coordinate(4,1)}), player);
-        SetShipMessage ship5 = new SetShipMessage(new Ship(new Coordinate[] {new Coordinate(8,5), new Coordinate(9,5), new Coordinate(10,5), new Coordinate(11,5)}), player);
-        SetShipMessage ship6 = new SetShipMessage(new Ship(new Coordinate[] {new Coordinate(11,7), new Coordinate(11,8),new Coordinate(11,9), new Coordinate(11,10), new Coordinate(11, 11)}), player);
+        SetShipMessage ship1 = new SetShipMessage(new Ship(new Coordinate[] {new Coordinate(2,2), new Coordinate(2,3)}));
+        SetShipMessage ship2 = new SetShipMessage(new Ship(new Coordinate[] {new Coordinate(4,4), new Coordinate(4,5), new Coordinate(4,6)}));
+        SetShipMessage ship3 = new SetShipMessage(new Ship(new Coordinate[] {new Coordinate(8,1), new Coordinate(9,1), new Coordinate(10, 1)}));
+        SetShipMessage ship4 = new SetShipMessage(new Ship(new Coordinate[] {new Coordinate(1,1), new Coordinate(2,1), new Coordinate(3,1), new Coordinate(4,1)}));
+        SetShipMessage ship5 = new SetShipMessage(new Ship(new Coordinate[] {new Coordinate(8,5), new Coordinate(9,5), new Coordinate(10,5), new Coordinate(11,5)}));
+        SetShipMessage ship6 = new SetShipMessage(new Ship(new Coordinate[] {new Coordinate(11,7), new Coordinate(11,8),new Coordinate(11,9), new Coordinate(11,10), new Coordinate(11, 11)}));
 
         try {
             wsClient.send(json.writeValueAsString(ship1));
@@ -120,16 +133,16 @@ public class VeryDumbRobot {
         }
 
         // if it's my turn, fire!
-        if (msg.get("playerTurn").asInt() == player) {
-            shoot();
-        }
+//        if (msg.get("playerTurn").asInt() == player) {
+//            shoot();
+//        }
     }
 
     public void shoot() {
         int idx = rand.nextInt(availableCoordinates.size());
         Coordinate coord = availableCoordinates.get(idx);
         availableCoordinates.remove(idx);
-        ShootMessage shootMessage = new ShootMessage(coord, player);
+        ShootMessage shootMessage = new ShootMessage(coord);
 
         try {
             wsClient.send(json.writeValueAsString(shootMessage));

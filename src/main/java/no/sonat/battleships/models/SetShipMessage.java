@@ -7,11 +7,9 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  */
 public class SetShipMessage {
     public final Ship ship;
-    public final int player;
     public final @JsonProperty("class") String metaType = "game.messages.SetShipMessage";
 
-    public SetShipMessage(Ship ship, int player) {
+    public SetShipMessage(Ship ship) {
         this.ship = ship;
-        this.player = player;
     }
 }
