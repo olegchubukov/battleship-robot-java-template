@@ -40,7 +40,7 @@ public class VeryDumbRobot {
             put("Authorization", "Bearer " + token);
         }};
 
-        this.wsClient = new WebSocketClient(new URI("ws://battle.codes/connect"), new Draft_10(), headers, 500) {
+        this.wsClient = new WebSocketClient(new URI("ws://localhost:9000/connect"), new Draft_10(), headers, 500) {
             @Override
             public void onOpen(ServerHandshake serverHandshake) {
                 System.out.println("Connected!");
@@ -66,19 +66,12 @@ public class VeryDumbRobot {
                     case "game.broadcast.GameIsStarted":
                         onGameStart(msg);
                         break;
-//                    case "game.broadcast.NextPlayerTurn":
-////                        if (msg.get("playerTurn").asInt() == player) {
-////                            shoot();
-////                        }
-//                        break;
-
                     case "game.messages.ItsYourTurnMessage":
                         shoot();
                         break;
                     case "game.broadcast.GameOver":
-//                        boolean weWon = msg.get("andTheWinnerIs").asInt() == player;
-//                        System.out.println(weWon ? "We Won!!!" : "Wo lost!!!");
-                        System.exit(0);
+                        // allright!! be ready for next game
+                        break;
                     default:
                         break;
                 }
@@ -131,11 +124,6 @@ public class VeryDumbRobot {
                 availableCoordinates.add(new Coordinate(x, y));
             }
         }
-
-        // if it's my turn, fire!
-//        if (msg.get("playerTurn").asInt() == player) {
-//            shoot();
-//        }
     }
 
     public void shoot() {
