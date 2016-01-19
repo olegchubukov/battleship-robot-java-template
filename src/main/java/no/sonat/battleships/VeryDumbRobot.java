@@ -40,7 +40,7 @@ public class VeryDumbRobot {
             put("Authorization", "Bearer " + token);
         }};
 
-        this.wsClient = new WebSocketClient(new URI("ws://localhost:9000/connect"), new Draft_10(), headers, 500) {
+        this.wsClient = new WebSocketClient(new URI("ws://battle.codes/connect"), new Draft_10(), headers, 500) {
             @Override
             public void onOpen(ServerHandshake serverHandshake) {
                 System.out.println("Connected!");
