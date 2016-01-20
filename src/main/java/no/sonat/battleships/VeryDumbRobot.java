@@ -34,13 +34,13 @@ public class VeryDumbRobot {
 
     public void initiate() throws URISyntaxException {
 
-        System.out.println("befor connect");
+        System.out.println("before connect");
 
         Map<String, String> headers = new HashMap<String, String>(){{
             put("Authorization", "Bearer " + token);
         }};
 
-        this.wsClient = new WebSocketClient(new URI("ws://localhost:9000/connect"), new Draft_10(), headers, 500) {
+        this.wsClient = new WebSocketClient(new URI("ws://battle.codes/connect"), new Draft_10(), headers, 500) {
             @Override
             public void onOpen(ServerHandshake serverHandshake) {
                 System.out.println("Connected!");
