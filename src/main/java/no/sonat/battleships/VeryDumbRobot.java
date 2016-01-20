@@ -119,6 +119,8 @@ public class VeryDumbRobot {
     final Random rand = new Random();
 
     public void onGameStart(JsonNode msg) {
+        // if another game is finished, available coordinates might still contain old data. Clear it and refill it.
+        availableCoordinates.clear();
         for (int x = 0; x < 12; x++) {
             for (int y = 0; y < 12; y++) {
                 availableCoordinates.add(new Coordinate(x, y));
