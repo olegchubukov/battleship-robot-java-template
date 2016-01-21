@@ -3,10 +3,7 @@ package no.sonat.battleships;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import no.sonat.battleships.models.Coordinate;
-import no.sonat.battleships.models.Ship;
-import no.sonat.battleships.models.ShootMessage;
-import no.sonat.battleships.models.SetShipMessage;
+import no.sonat.battleships.models.*;
 import org.java_websocket.client.WebSocketClient;
 import org.java_websocket.drafts.Draft_10;
 import org.java_websocket.drafts.Draft_76;
@@ -20,15 +17,13 @@ import java.util.*;
 /**
  * Created by lars on 16.06.15.
  */
-public class VeryDumbRobot {
+public class BattleshipRobot {
 
     final ObjectMapper json = new ObjectMapper();
-
     final String token;
-
     WebSocketClient wsClient;
 
-    public VeryDumbRobot(String token) throws Exception {
+    public BattleshipRobot(String token) throws Exception {
         this.token = token;
     }
 
@@ -40,10 +35,28 @@ public class VeryDumbRobot {
             put("Authorization", "Bearer " + token);
         }};
 
+        // ping server every 5 seconds to keep ws connection alive.
+        Thread pingThread = new Thread(() -> {
+            try {
+                while (true) {
+                    Thread.sleep(5000);
+
+                    wsClient.send(json.writeValueAsString(new Ping()));
+                }
+            } catch (InterruptedException e) {
+                // ignore. Let the thread die.
+
+            } catch (JsonProcessingException e) {
+                e.printStackTrace();
+            }
+        });
+
         this.wsClient = new WebSocketClient(new URI("ws://battle.codes/connect"), new Draft_10(), headers, 500) {
             @Override
             public void onOpen(ServerHandshake serverHandshake) {
                 System.out.println("Connected!");
+
+                pingThread.start();
             }
 
             @Override
@@ -94,6 +107,10 @@ public class VeryDumbRobot {
         wsClient.connect();
     }
 
+
+    /**
+     * This method is called when game is in planning mode, and the robot should place ships
+     */
     public void placeShips() {
         SetShipMessage ship1 = new SetShipMessage(new Ship(new Coordinate[] {new Coordinate(2,2), new Coordinate(2,3)}));
         SetShipMessage ship2 = new SetShipMessage(new Ship(new Coordinate[] {new Coordinate(4,4), new Coordinate(4,5), new Coordinate(4,6)}));
@@ -118,6 +135,12 @@ public class VeryDumbRobot {
     final List<Coordinate> availableCoordinates = new ArrayList<>();
     final Random rand = new Random();
 
+    /**
+     * This method is called when the game is started. Use this method to do any initialization of shooting algorithm.
+     * At this moment, it simply fills a list with available coordinates, which enables the robot to avoid shooting the
+     * same place twice (which is allowed, but not smart)
+     * @param msg
+     */
     public void onGameStart(JsonNode msg) {
         // if another game is finished, available coordinates might still contain old data. Clear it and refill it.
         availableCoordinates.clear();
@@ -128,9 +151,14 @@ public class VeryDumbRobot {
         }
     }
 
+    /**
+     * This method is called when it is your robots turn to shoot.
+     */
     public void shoot() {
         int idx = rand.nextInt(availableCoordinates.size());
         Coordinate coord = availableCoordinates.get(idx);
+
+        // remove coordinate from available coordinates, so I don't shoot at the same coordinate twice.
         availableCoordinates.remove(idx);
         ShootMessage shootMessage = new ShootMessage(coord);
 
