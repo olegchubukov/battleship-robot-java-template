@@ -14,4 +14,12 @@ public class ShootMessage {
     public ShootMessage(Coordinate coordinate) {
         this.coordinate = coordinate;
     }
+
+    @Override
+    public String toString() {
+        return "ShootMessage{" +
+                "coordinate=" + coordinate +
+                ", metaType='" + metaType + '\'' +
+                '}';
+    }
 }

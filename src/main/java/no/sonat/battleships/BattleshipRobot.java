@@ -6,7 +6,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import no.sonat.battleships.models.*;
 import org.java_websocket.client.WebSocketClient;
 import org.java_websocket.drafts.Draft_10;
-import org.java_websocket.drafts.Draft_76;
 import org.java_websocket.handshake.ServerHandshake;
 
 import java.io.IOException;
@@ -86,7 +85,11 @@ public class BattleshipRobot {
                         // allright!! be ready for next game
                         break;
                     case "game.result.ShootResult":
-                        System.out.println("game.result.ShootResult");
+
+                        ObjectMapper mapper = new ObjectMapper();
+                        ShootResult shootResult = mapper.convertValue(msg, ShootResult.class);
+                        cells[lastShootX][lastShootY] = shootResult;
+
                         break;
                     default:
                         break;
@@ -136,6 +139,11 @@ public class BattleshipRobot {
     }
 
     final List<Coordinate> availableCoordinates = new ArrayList<>();
+    final ShootResult[][] cells = new ShootResult[12][12];
+    int lastShootX = -1;
+    int lastShootY = -1;
+    final Coordinate lastBang = null;
+
     final Random rand = new Random();
 
     /**
@@ -151,25 +159,92 @@ public class BattleshipRobot {
         for (int x = 0; x < 12; x++) {
             for (int y = 0; y < 12; y++) {
                 availableCoordinates.add(new Coordinate(x, y));
+                cells[x][y] = null;
             }
         }
+
+        lastShootX = -1;
+        lastShootY = -1;
     }
 
     /**
      * This method is called when it is your robots turn to shoot.
      */
     public void shoot() {
-        int idx = rand.nextInt(availableCoordinates.size());
-        Coordinate coord = availableCoordinates.get(idx);
+        Coordinate coord = chooseNextShot();
+        System.out.println("choose ready" + coord);
 
-        // remove coordinate from available coordinates, so I don't shoot at the same coordinate twice.
-        availableCoordinates.remove(idx);
         ShootMessage shootMessage = new ShootMessage(coord);
 
+        lastShootX = coord.x;
+        lastShootY = coord.y;
+
+
         try {
-            wsClient.send(json.writeValueAsString(shootMessage));
+            String s = json.writeValueAsString(shootMessage);
+            System.out.println(s);
+            wsClient.send(s);
         } catch (JsonProcessingException e) {
             throw new RuntimeException("Error marshalling object", e);
         }
+    }
+
+    private Coordinate chooseNextShot() {
+        int idx;
+        Coordinate coord = null; //= availableCoordinates.get(idx);
+        if (isFirstShoot()) {
+            idx = rand.nextInt(availableCoordinates.size());
+            coord = availableCoordinates.get(idx);
+        } else {
+            if (cells[lastShootX][lastShootY].isBang()) {
+                ArrayList<Coordinate> coordinates = new ArrayList<>(Arrays.asList(
+                        new Coordinate(lastShootX + 1, lastShootY),
+                        new Coordinate(lastShootX - 1, lastShootY),
+                        new Coordinate(lastShootX, lastShootY + 1),
+                        new Coordinate(lastShootX, lastShootY - 1),
+                        new Coordinate(lastShootX - 1, lastShootY - 1),
+                        new Coordinate(lastShootX + 1, lastShootY + 1),
+                        new Coordinate(lastShootX + 1, lastShootY - 1),
+                        new Coordinate(lastShootX - 1, lastShootY + 1)
+                ));
+
+                idx = rand.nextInt(coordinates.size());
+
+                while (coordinates.size() == 0 || isInvalidCoordinate(coordinates.get(idx)) || availableCoordinates.indexOf(coordinates.get(idx)) == -1) {
+                    coordinates.remove(idx);
+
+                    if (coordinates.size() == 0) {
+                        idx = rand.nextInt(availableCoordinates.size());
+                    } else {
+                        idx = rand.nextInt(coordinates.size());
+                    }
+                }
+
+                int nextIdx = availableCoordinates.indexOf(coordinates.get(idx));
+                coord = availableCoordinates.get(nextIdx);
+            } else if (cells[lastShootX][lastShootY].isSunk()) {
+                idx = rand.nextInt(availableCoordinates.size());
+                coord = availableCoordinates.get(idx);
+            } else if (cells[lastShootX][lastShootY].isSplash()) {
+                idx = rand.nextInt(availableCoordinates.size());
+                coord = availableCoordinates.get(idx);
+            } else {
+                System.out.println("smth else ni response");
+                throw new RuntimeException("CHEATERS");
+            }
+        }
+
+
+        // remove coordinate from available coordinates, so I don't shoot at the same coordinate twice.
+        availableCoordinates.remove(idx);
+        return coord;
+    }
+
+    private boolean isFirstShoot() {
+        return lastShootX == -1 && lastShootY == -1;
+    }
+
+    private boolean isInvalidCoordinate(Coordinate coordinate) {
+        return coordinate.x < 0 || coordinate.x >= 12 || coordinate.y < 0 || coordinate.y >= 12;
     }
 }
